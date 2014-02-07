@@ -2,6 +2,9 @@
 ** Copyright (c) 1999-2005 Adam Rutter, Justin Hammond, Mark Hetherington
 ** http://www.neostats.net/
 **
+** Additions (v0.1b1) Copyright (c) 2014 DarkSpirit IRC Network
+** http://www.darkspirit.org/
+**
 **  This program is free software; you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License as published by
 **  the Free Software Foundation; either version 2 of the License, or
@@ -246,6 +249,8 @@ static scanclient *do_lookup( Client *lookupuser, Client *reportuser )
 		sc = ns_malloc( sizeof( scanclient ) );
 		sc->check = reportuser;
 		sc->user = lookupuser;
+		/* HACK: Prevent sc->user use-after-free in certain conditions. */
+		strlcpy( sc->nick, sc->user->name, 30 ); 
 		sc->domain = dl;
 		sc->banned = 0;
 		sc->lookup = ns_malloc( buflen );

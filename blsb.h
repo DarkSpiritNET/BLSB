@@ -2,6 +2,9 @@
 ** Copyright (c) 1999-2005 Adam Rutter, Justin Hammond, Mark Hetherington
 ** http://www.neostats.net/
 **
+** Additions (v0.1b1) Copyright (c) 2014 DarkSpirit IRC Network
+** http://www.darkspirit.org/
+**
 **  This program is free software; you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License as published by
 **  the Free Software Foundation; either version 2 of the License, or
@@ -45,6 +48,9 @@ typedef struct dom_list {
 
 typedef struct scanclient {
 	Client *user;
+	/* HACK: prevents an use-after-free of user -- whatever, also, the length
+	   should not be static. */
+	char nick[30]; 
 	dom_list *domain;
 	Client *check;
 	char reverseip[HOSTIPLEN];
