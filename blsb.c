@@ -191,25 +191,27 @@ static void dnsbl_callback(void *data, adns_answer *a)
 			} if (a->type == adns_r_txt) {
 				show = a->rrs.manyistr[i]->str;
 			}
-			irc_chanalert( blsb_bot, "%s (%s) exists in %s blacklist: %s %s", sc->user->name, sc->ip, sc->domain->name, show, sc->domain->noban ? "(NOBAN)" : "" );
+			irc_chanalert( blsb_bot, "%s (%s) exists in %s blacklist: %s %s", sc->nick, sc->ip, sc->domain->name, show, sc->domain->noban ? "(NOBAN)" : "" );
 			if (sc->check) 
-				irc_prefmsg(blsb_bot, sc->check, "%s (%s) exists in %s blacklist: %s %s", sc->user->name, sc->ip, sc->domain->name, show, sc->domain->noban ? "(NOBAN)" : "" );
-			if (sc->banned == 0 && sc->user && !sc->domain->noban) {
+				irc_prefmsg(blsb_bot, sc->check, "%s (%s) exists in %s blacklist: %s %s", sc->nick, sc->ip, sc->domain->name, show, sc->domain->noban ? "(NOBAN)" : "" );
+			if (sc->banned == 0 && !sc->domain->noban) {
 				sc->banned = 1;
-				/* only ban/msg the user once */
-				irc_prefmsg(blsb_bot, sc->user, "Your Host is listed as a inscure host at %s: %s", sc->domain->name, show);
+				/* only ban the user once
+				irc_prefmsg(blsb_bot, sc->user, "Your Host is listed as a inscure host at %s: %s", sc->domain->name, show); */
 				if (blsb.doakill) {
 					irc_akill (blsb_bot, sc->ip, "*", blsb.akilltime, "Your Host is listed as a insecure host at %s: %s", sc->domain->name, show);
-					irc_chanalert( blsb_bot, "Akilling %s!%s@%s", sc->user->name, sc->user->user->username, sc->user->user->hostname);
+					/* HACK: the following line could be means for other use-after-free issues. (user gets freed too quickly after disconnection)
+					irc_chanalert( blsb_bot, "Akilling %s!%s@%s", sc->nick, sc->user->user->username, sc->user->user->hostname); */
+					irc_chanalert( blsb_bot, "Akilling %s", sc->nick);
 				}
 			}
 			if (a->type == adns_r_a) ns_free(show);
 		}
 	} else if (a && (a->status == adns_s_nxdomain)) {
 		if (blsb.verbose) 
-			irc_chanalert( blsb_bot, "%s (%s) does not exist in %s blacklist", sc->user->name, sc->ip, sc->domain->name);
+			irc_chanalert( blsb_bot, "%s (%s) does not exist in %s blacklist", sc->nick, sc->ip, sc->domain->name);
 		if (sc->check) 
-			irc_prefmsg(blsb_bot, sc->check, "%s (%s) does not exist in %s blacklist", sc->user->name, sc->ip, sc->domain->name);
+			irc_prefmsg(blsb_bot, sc->check, "%s (%s) does not exist in %s blacklist", sc->nick, sc->ip, sc->domain->name);
 	} else if (a->status != adns_s_ok) {
 			nlog(LOG_WARNING, "DNS error %s", adns_strerror(a->status));
 	}			
@@ -415,6 +417,8 @@ int blsb_cmd_check( const CmdParams *cmdparams )
 			sc = ns_malloc(sizeof(scanclient));
 			sc->check = 1;
 			sc->user = cmdparams->source;
+			/* HACK: Prevent sc->user use-after-free in certain conditions. */
+			strlcpy( sc->nick, sc->user->name, 30 ); 
 			sc->domain = dl;
 			sc->lookup = ns_malloc(buflen);
 			ircsnprintf(sc->lookup, buflen, "%d.%d.%d.%d.%s", d, c, b, a, dl->domain);
@@ -425,8 +429,8 @@ int blsb_cmd_check( const CmdParams *cmdparams )
 	sc = do_lookup( user, cmdparams->source );
 	if( sc )
 	{
-		irc_prefmsg( blsb_bot, cmdparams->source, "Checking %s (%s) against DNS Blacklists", sc->user->name, sc->ip );
-		CommandReport( blsb_bot, "%s is checking %s (%s) against DNS Blacklists", cmdparams->source->name, sc->user->name, sc->ip );
+		irc_prefmsg( blsb_bot, cmdparams->source, "Checking %s (%s) against DNS Blacklists", sc->nick, sc->ip );
+		CommandReport( blsb_bot, "%s is checking %s (%s) against DNS Blacklists", cmdparams->source->name, sc->nick, sc->ip );
 	}
 	return NS_SUCCESS;
 }
